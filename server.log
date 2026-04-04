@@ -1,0 +1,21 @@
+
+  🚗 Tesla Alerts Backend Started
+  📡 Server listening on http://0.0.0.0:3000
+  🏥 Health check: http://localhost:3000/health
+  📚 API docs: http://localhost:3000/api/reports
+  
+  🔧 To connect frontend:
+  1. Update tesla_alerts_final.html to use API endpoints
+  2. Replace localStorage functions with fetch calls to this server
+  
+  📝 Example API usage:
+  GET  http://localhost:3000/api/reports          # Get all reports
+  POST http://localhost:3000/api/reports          # Create new report
+  GET  http://localhost:3000/api/reports/:id      # Get specific report
+  DELETE http://localhost:3000/api/reports/:id    # Delete report
+  GET  http://localhost:3000/api/stats            # Get statistics
+  
+  Press Ctrl+C to stop the server
+  
+Connected to SQLite database.
+Database tables initialized.

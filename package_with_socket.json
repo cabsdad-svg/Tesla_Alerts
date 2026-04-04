@@ -1,0 +1,35 @@
+{
+  "name": "tesla-alerts-backend",
+  "version": "1.0.0",
+  "description": "Backend service for Tesla crowd-sourced alerts system with Socket.IO real-time updates",
+  "main": "server_with_socket.js",
+  "scripts": {
+    "start": "node server_with_socket.js",
+    "dev": "nodemon server_with_socket.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "tesla",
+    "alerts",
+    "crowd-sourced",
+    "driving",
+    "maps",
+    "leaflet",
+    "socket.io",
+    "realtime"
+  ],
+  "author": "Tesla Alerts System",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

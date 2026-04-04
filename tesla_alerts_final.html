@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tesla Alerts - Final Version with Reliable Tile Layers</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.css"/>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .leaflet-control {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 4px;
+        }
+        .leaflet-control-layers {
+            width: 220px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .leaflet-control-layers label {
+            display: block;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .leaflet-control-layers label:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .leaflet-control-layers span {
+            color: #fff;
+            font-size: 16px;
+        }
+        .leaflet-control-layers input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        .leaflet-popup-content {
+            font-size: 14px;
+            line-height: 1.4;
+            min-width: 200px;
+        }
+        .report-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            font-size: 18px;
+            border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        .report-button:hover {
+            background: #ff5722;
+            transform: scale(1.05);
+        }
+        .report-button:active {
+            transform: scale(0.98);
+        }
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            max-width: 300px;
+            z-index: 1000;
+        }
+        .alert-type-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.2s ease;
+        }
+        .alert-type-btn:hover {
+            background: rgba(255,255,255,0.2);
+        }
+        .alert-type-btn.active {
+            background: #ff6b35;
+        }
+        .alert-type-btn i {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+        .legend {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 6px 0;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .stats-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            z-index: 1000;
+            min-width: 150px;
+        }
+        .stats-panel h4 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        .connection-status {
+            position: fixed;
+            top: 60px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+            min-width: 120px;
+        }
+        .connection-status.connected {
+            background: rgba(76, 175, 80, 0.8);
+        }
+        .connection-status.disconnected {
+            background: rgba(244, 67, 54, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <button class="report-button" id="reportBtn">+ Report Alert</button>
+    <div class="info-panel" id="infoPanel">
+        <h3>Tesla Alerts System</h3>
+        <p>Select alert type, then click map</p>
+        <p id="coordDisplay">Ready to report</p>
+        <p id="alertTypeDisplay">Current: Police</p>
+    </div>
+    <div class="connection-status" id="connectionStatus">Disconnected</div>
+    <div class="legend" id="legend">
+        <h4>Alert Types</h4>
+        <div id="legendContent"></div>
+    </div>
+    <div class="stats-panel" id="statsPanel">
+        <h4>Statistics</h4>
+        <div id="statsContent">
+            <p>Total Reports: <span id="totalReports">0</span></p>
+            <p>Today: <span id="todayReports">0</span></p>
+            <p>Heatmap: <span id="heatmapStatus">Off</span></p>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script>
+        // Initialize map
+        const map = L.map('map').setView([37.7749, -122.4194], 13); // Default to SF
+        
+        // RELIABLE Base layers - all tested and working
+        const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19
+        });
+        
+        const osmFranceLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap France',
+            maxZoom: 20
+        });
+        
+        const cartoLightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CartoDB',
+            maxZoom: 19
+        });
+        
+        const cartoDarkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors &copy; CartoDB',
+            maxZoom: 19
+        });
+        
+        // Add OSM as default (most reliable)
+        osmLayer.addTo(map);
+        
+        // Layer control with working options
+        const baseLayers = {
+            "OpenStreetMap Standard": osmLayer,
+            "OpenStreetMap France": osmFranceLayer,
+            "CartoDB Light (Day)": cartoLightLayer,
+            "CartoDB Dark (Night)": cartoDarkLayer // Perfect for Tesla night driving
+        };
+        
+        const layerControl = L.control.layers(baseLayers).addTo(map);
+        
+        // Alert types configuration
+        const alertTypes = {
+            police: {
+                name: "Police Speed Trap",
+                icon: "🚓",
+                color: "#ff0000",
+                description: "Police monitoring speed"
+            },
+            speedcamera: {
+                name: "Speed Camera",
+                icon: "📷",
+                color: "#ff6b35",
+                description: "Fixed speed camera"
+            },
+            redlightcamera: {
+                name: "Red Light Camera",
+                icon: "🚦",
+                color: "#ff00ff",
+                description: "Red light enforcement camera"
+            },
+            hazard: {
+                name: "Road Hazard",
+                icon: "⚠️",
+                color: "#ffa500",
+                description: "Debris, pothole, obstacle"
+            },
+            accident: {
+                name: "Accident",
+                icon: "💥",
+                color: "#ff0000",
+                description: "Vehicle collision"
+            },
+            construction: {
+                name: "Construction",
+                icon: "🚧",
+                color: "#ffff00",
+                description: "Road work, lane closure"
+            },
+            blocked: {
+                name: "Blocked Road",
+                icon: "🚫",
+                color: "#800080",
+                description: "Road closed, inaccessible"
+            }
+        };
+        
+        // Current selected alert type
+        let currentAlertType = 'police';
+        
+        // Layers for different functionalities
+        const markersLayer = L.layerGroup().addTo(map);
+        const heatmapLayer = L.heatLayer([], {radius: 25, blur: 15, maxZoom: 17}).addTo(map);
+        let heatmapActive = false;
+        
+        // Connection status tracking
+        let isOnline = navigator.onLine;
+        const connectionStatusEl = document.getElementById('connectionStatus');
+        
+        function updateConnectionStatus() {
+            isOnline = navigator.onLine;
+            connectionStatusEl.textContent = isOnline ? 'Connected' : 'Disconnected';
+            connectionStatusEl.className = `connection-status ${isOnline ? 'connected' : 'disconnected'}`;
+        }
+        
+        // Create custom icon function
+        function createAlertIcon(alertType, isDraggable = true) {
+            const typeInfo = alertTypes[alertType];
+            return L.divIcon({
+                className: 'alert-marker',
+                html: `<div style="
+                    background-color: ${typeInfo.color}; 
+                    width: 30px; 
+                    height: 30px; 
+                    border-radius: 50%; 
+                    border: 3px solid white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 18px;
+                    ">
+                    ${typeInfo.icon}
+                </div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -30]
+            });
+        }
+        
+        // Load reports from localStorage (backend simulation - replace with real API later)
+        function loadReports() {
+            const saved = localStorage.getItem('teslaAlertsReports');
+            return saved ? JSON.parse(saved) : [];
+        }
+        
+        // Save reports to localStorage (backend simulation)
+        function saveReports(reports) {
+            localStorage.setItem('teslaAlertsReports', JSON.stringify(reports));
+        }
+        
+        // Add a report to the map and storage
+        function addReport(lat, lng, alertType) {
+            const marker = L.marker([lat, lng], {
+                icon: createAlertIcon(alertType),
+                draggable: true
+            }).addTo(markersLayer);
+            
+            const reportData = {
+                id: Date.now() + Math.random(),
+                lat: lat,
+                lng: lng,
+                type: alertType,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Bind popup with details and actions
+            marker.bindPopup(`
+                <div class="popup-content">
+                    <h4>${alertTypes[alertType].name}</h4>
+                    <p><strong>Location:</strong> ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
+                    <p><strong>Time:</strong> ${new Date(reportData.timestamp).toLocaleString()}</p>
+                    <hr>
+                    <button id="confirmReport-${reportData.id}" class="alert-type-btn" style="background: #4CAF50; margin: 2px;">Confirm</button>
+                    <button id="cancelReport-${reportData.id}" class="alert-type-btn" style="background: #f44336; margin: 2px;">Cancel</button>
+                </div>
+            `).openPopup();
+            
+            // Store in localStorage
+            const reports = loadReports();
+            reports.push(reportData);
+            saveReports(reports);
+            
+            // Update heatmap data
+            updateHeatmap();
+            
+            // Update statistics
+            updateStats();
+            
+            // Handle popup buttons
+            marker.on('popupopen', function() {
+                document.getElementById(`confirmReport-${reportData.id}`).onclick = function() {
+                    alert('Report confirmed and saved!');
+                    map.closePopup();
+                };
+                
+                document.getElementById(`cancelReport-${reportData.id}`).onclick = function() {
+                    markersLayer.removeLayer(marker);
+                    // Remove from storage
+                    const updatedReports = loadReports().filter(r => r.id !== reportData.id);
+                    saveReports(updatedReports);
+                    updateHeatmap();
+                    updateStats();
+                    map.closePopup();
+                };
+            });
+            
+            return marker;
+        }
+        
+        // Update heatmap layer with current reports
+        function updateHeatmap() {
+            if (!heatmapActive) return;
+            
+            const reports = loadReports();
+            const heatData = reports.map(report => [report.lat, report.lng, 1]); // [lat, lng, intensity]
+            heatmapLayer.setLatLngs(heatData);
+        }
+        
+        // Update statistics display
+        function updateStats() {
+            const reports = loadReports();
+            const today = new Date().toISOString().split('T')[0];
+            const todayReports = reports.filter(r => r.timestamp.startsWith(today)).length;
+            
+            document.getElementById('totalReports').textContent = reports.length;
+            document.getElementById('todayReports').textContent = todayReports;
+        }
+        
+        // Toggle heatmap
+        function toggleHeatmap() {
+            heatmapActive = !heatmapActive;
+            document.getElementById('heatmapStatus').textContent = heatmapActive ? 'On' : 'Off';
+            document.getElementById('heatmapStatus').style.color = heatmapActive ? '#4CAF50' : '#f44336';
+            
+            if (heatmapActive) {
+                updateHeatmap();
+            } else {
+                heatmapLayer.setLatLngs([]);
+            }
+        }
+        
+        // Initialize the interface
+        function initInterface() {
+            // Create alert type buttons
+            const alertTypeContainer = document.createElement('div');
+            alertTypeContainer.style.marginTop = '15px';
+            
+            Object.entries(alertTypes).forEach(([key, type]) => {
+                const btn = document.createElement('button');
+                btn.className = 'alert-type-btn';
+                btn.innerHTML = `<i>${type.icon}</i> ${type.name}`;
+                btn.onclick = () => {
+                    currentAlertType = key;
+                    // Update active button
+                    document.querySelectorAll('.alert-type-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById('alertTypeDisplay').textContent = `Current: ${type.name}`;
+                };
+                
+                // Set police as default active
+                if (key === 'police') {
+                    btn.classList.add('active');
+                }
+                
+                alertTypeContainer.appendChild(btn);
+            });
+            
+            document.getElementById('infoPanel').appendChild(alertTypeContainer);
+            
+            // Create legend
+            const legendContent = document.getElementById('legendContent');
+            Object.entries(alertTypes).forEach(([key, type]) => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-color" style="background-color: ${type.color};"></div>
+                    <span>${type.name}</span>
+                `;
+                legendContent.appendChild(item);
+            });
+            
+            // Load existing reports
+            loadExistingReports();
+            
+            // Update initial stats
+            updateStats();
+            
+            // Set up connection status monitoring
+            updateConnectionStatus();
+            window.addEventListener('online', updateConnectionStatus);
+            window.addEventListener('offline', updateConnectionStatus);
+        }
+        
+        // Load and display existing reports from storage
+        function loadExistingReports() {
+            const reports = loadReports();
+            reports.forEach(report => {
+                addReport(report.lat, report.lng, report.type);
+            });
+            updateHeatmap();
+        }
+        
+        // Click to add report
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            addReport(lat, lng, currentAlertType);
+            
+            // Update coordinate display
+            document.getElementById('coordDisplay').textContent = 
+                `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)}`;
+        });
+        
+        // Report button (alternative way to add report at current location)
+        document.getElementById('reportBtn').addEventListener('click', function() {
+            const center = map.getCenter();
+            addReport(center.lat, center.lng, currentAlertType);
+            
+            document.getElementById('coordDisplay').textContent = 
+                `Lat: ${center.lat.toFixed(6)}, Lng: ${center.lng.toFixed(6)}`;
+        });
+        
+        // Handle visibility change (for when Tesla tab might be hidden)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                console.log('Page hidden - pausing updates');
+            } else {
+                console.log('Page visible - resuming');
+                // Refresh data when becoming visible
+                loadExistingReports();
+                updateStats();
+            }
+        });
+        
+        // Make sure map resizes properly if window changes
+        window.addEventListener('resize', function() {
+            map.invalidateSize();
+        });
+        
+        // Initialize everything
+        initInterface();
+    </script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: tesla-alerts-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+    # Optional: Add persistent disk for SQLite database (data persists between deploys)
+    # disk:
+    #   name: tesla-data
+    #   mountPath: /var/lib/sqlite
+    #   sizeGB: 1
