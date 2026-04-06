@@ -189,8 +189,50 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+        // Initialize Socket.IO connection
+        const socket = io();
+        
+        // Connection status element
+        const connectionStatusEl = document.getElementById('connectionStatus');
+        
+        socket.on('connect', () => {
+            console.log('Connected to Socket.IO server');
+            connectionStatusEl.textContent = 'Connected';
+            connectionStatusEl.className = 'connection-status connected';
+            // Load existing reports on connect
+            loadExistingReports();
+            updateStats();
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('Disconnected from Socket.IO server');
+            connectionStatusEl.textContent = 'Disconnected';
+            connectionStatusEl.className = 'connection-status disconnected';
+        });
+        
+        socket.on('connect_error', (error) => {
+            console.error('Socket.IO connection error:', error);
+            connectionStatusEl.textContent = 'Connection Error';
+            connectionStatusEl.className = 'connection-status disconnected';
+        });
+        
+        // Handle new reports from other users
+        socket.on('new-report', (data) => {
+            console.log('New report received via Socket.IO:', data);
+            // Add the report to our map and storage
+            const reports = loadReports();
+            const exists = reports.some(r => r.id === data.id);
+            if (!exists) {
+                reports.push(data);
+                saveReports(reports);
+                addReport(data.lat, data.lng, data.type);
+                updateHeatmap();
+                updateStats();
+            }
+        });</script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-FnrOsgD5u9xfEjYPkdM9O8Mnn+ dangerp1U8cGZ0w2FQzVx6lZ7Q6pJZV9k2eJ3JgH6" crossorigin="anonymous"></script></script>
     <script>
         // Initialize map
         const map = L.map('map').setView([37.7749, -122.4194], 13); // Default to SF
